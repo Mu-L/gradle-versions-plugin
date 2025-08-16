@@ -14,7 +14,7 @@ checks for updates to Gradle itself.
   - [buildscript block](#buildscript-block)
   - [Using a Gradle init script](#using-a-gradle-init-script)
   - [Related plugins](#related-plugins)
-  - [Known issues](#known-issues)
+  - [Known issues](#workarounds-for-related-gradle-issues)
 - [dependencyUpdates](#dependencyupdates)
   - [Multi-project build](#multi-project-build)
   - [Revisions](#revisions)
@@ -125,6 +125,7 @@ You may also wish to explore additional functionality provided by,
 
 ### Workarounds for related Gradle Issues ###
  - https://github.com/gradle/gradle/issues/24636: setting the flag `org.gradle.configuration-cache.problems=warn` in `gradle.properties` causes the dependency check to fail to find dependencies with message `No dependencies found`.  Comment out that line until the upstream issue with Gradle is fixed.
+ - In Gradle 9+, parallel execution is incompatible with having one project's task resolving another project configuration's dependencies. This requires obtaining an internal lock not available to plugin developers, but is relied on by native plugins (e.g. for IDE support). Thankfully parallel execution is not a speedup for these types of tasks and simply requires passing the `--no-parallel` flag when running the `dependencyUpdates` task.
 
 ## Tasks
 
@@ -286,11 +287,11 @@ import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 tasks.withType<DependencyUpdatesTask> {
   resolutionStrategy {
     componentSelection {
-      all {
+      all(Action<ComponentSelectionWithCurrent> {
         if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
           reject("Release candidate")
         }
-      }
+      })
     }
   }
 }
